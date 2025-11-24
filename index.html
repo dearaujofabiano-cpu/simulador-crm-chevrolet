@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRM Pós-Venda Chevrolet - Simulação Operacional</title>
+    <!-- Carregando Tailwind CSS CDN para estilização moderna e responsiva --><script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=Montserrat:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        /* Paleta de Cores Chevrolet (Manter para o sistema CRM) */
+        :root {
+            --gm-blue: #0A3C98; /* Azul primário */
+            --gm-gold: #FFC72C; /* Amarelo/Dourado (Detalhe) */
+            --gm-gray: #4B4B4B;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f4f6f9;
+        }
+        .bg-gm-blue { background-color: var(--gm-blue); }
+        .text-gm-blue { color: var(--gm-blue); }
+        .bg-gm-gold { background-color: var(--gm-gold); }
+        .shadow-gm { box-shadow: 0 4px 6px -1px rgba(10, 60, 152, 0.1), 0 2px 4px -1px rgba(10, 60, 152, 0.06); }
+
+        /* Estilos para a nova capa pastel */
+        #telaCapa {
+            background: linear-gradient(135deg, #e0f2f7 0%, #ffebee 100%); /* Gradiente suave azul e rosa pastel */
+            font-family: 'Montserrat', sans-serif; /* Fonte mais elegante para a capa */
+        }
+        #telaCapa .card-capa {
+            background-color: rgba(255, 255, 255, 0.9); /* Fundo branco semi-transparente */
+            backdrop-filter: blur(5px); /* Efeito de desfoque sutil */
+            border-color: #a7d9f0; /* Borda em tom pastel */
+            color: #333; /* Texto escuro para contraste */
+        }
+        #telaCapa .title-capa {
+            color: var(--gm-blue); /* Mantém o azul GM para o título principal */
+            font-weight: 700; /* Bold para o título */
+        }
+        #telaCapa .subtitle-capa {
+            color: #555;
+            font-weight: 300; /* Leve para o subtítulo */
+        }
+        #telaCapa .button-capa {
+            background-color: #87CEEB; /* Azul céu pastel */
+            color: white;
+            transition: all 0.3s ease;
+        }
+        #telaCapa .button-capa:hover {
+            background-color: #6495ED; /* Azul royal pastel mais escuro */
+            transform: translateY(-2px);
+            box-shadow: 0 6px 10px rgba(0, 0, 0, 0.1);
+        }
+        #telaCapa .brand-info {
+            color: #777;
+        }
+
+
+        /* Estilos para o modal de detalhe do cliente */
+        #detalheCliente {
+            transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+        }
+        /* Estilização para o collapse (details/summary) */
+        .crm-details summary {
+            padding: 1rem;
+            cursor: pointer;
+            font-weight: 700;
+            color: var(--gm-blue);
+            border-bottom: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+        }
+        .crm-details summary:hover {
+            background-color: #f0f4ff; /* Levemente azulado ao passar o mouse */
+        }
+        .crm-details details[open] summary {
+            background-color: #e5e7eb;
+            border-bottom-left-radius: 0;
+            border-bottom-right-radius: 0;
+        }
+        .crm-details .content {
+            padding: 1rem;
+            border-left: 1px solid #e5e7eb;
+            border-right: 1px solid #e5e7eb;
+            border-bottom: 1px solid #e5e7eb;
+            border-bottom-left-radius: 0.5rem;
+            border-bottom-right-radius: 0.5rem;
+            background-color: white;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Variável global para armazenar os dados de clientes (Atualizada com NPS 0-5) --><script>
+        const clientesData = [
+            // CLIENTES EXISTENTES
+            {
+                id: 'A001', hora: '08:00', nome: 'Beatriz Lopes', veiculo: 'Onix Plus 2023', placa: 'OAB-2023', servico: 'Diagnóstico de Ruído', perfil: 'DETRATORA / LITIGIOSA',
+                detalhes: {
+                    idade: '21 anos', profissao: 'Advogada (Recém-formada)', contato: '(11) 99888-7777 (WhatsApp)',
+                    resumo: 'Exige tratamento VIP e usa termos jurídicos. NPS 1/5. Busca Estilo/Status.',
+                    estrategia: '🔴 AÇÃO CRÍTICA: Chamar de "Doutora". Tratar TUDO por escrito (WhatsApp). Evitar prometer prazos (usar "Estimativa"). Oferecer Vitrificação de Pintura (Estética).',
+                    historico: [
+                        { os: '119100', data: '16/11/2025', km: '15.200', tipo: 'Diagnóstico de Ruído (Retorno)', status: 'Fechado (Cortesia)', consultor: 'Júnior', servicos: 'Diagnóstico de 1 hora (Cobrança Isenta)', recusados: 'Nenhum', nps: '1/5' },
+                        { os: '113200', data: '05/06/2025', km: '10.000', tipo: 'Revisão 10.000 km', status: 'Aprovado (Básico)', consultor: 'Sênior', servicos: 'Óleo, Filtros (Motor, Óleo, Combustível)', recusados: 'Alinhamento, Limpeza de A/C', nps: '2/5' }
+                    ],
+                    historicoRelacionamento: [
+                        { data: '16/11/2025', tipo: 'Reclamação Presencial', resumo: 'Alegou que cobrança de diagnóstico na garantia é "prática abusiva" e ameaçou Procon.' },
+                        { data: '06/06/2025', tipo: 'NPS/Comentário', resumo: 'Reclamou que "Wi-Fi da sala de espera é lento e o café não é expresso. Esperava mais de uma marca global."' },
+                        { data: '01/05/2025', tipo: 'Redes Sociais', resumo: 'Postou Stories marcando a Chevrolet Brasil sobre "acabamento de plástico que range" (Ruído Trivial).' }
+                    ],
+                    alertasOportunidades: [
+                        { tipo: 'ALERTA', mensagem: 'BLINDAGEM JURÍDICA: Tudo por escrito. NÃO prometer carro reserva ou prazos exatos.' },
+                        { tipo: 'OPORTUNIDADE', mensagem: 'Venda de Estética: Oferecer Vitrificação ou Hidratação de Couro. Ela compra STATUS e DESIGN.' },
+                        { tipo: 'TECNOLOGIA', mensagem: 'Ponto Fraco: Garantir que o MyLink e o Apple CarPlay estejam 100% funcionais.' }
+                    ]
+                }
+            },
+            {
+                id: 'B002', hora: '09:00', nome: 'Mariana Duarte', veiculo: 'Onix Hatch LTZ 2025', placa: 'ONX-9000', servico: 'Revisão 10.000 km', perfil: 'NOVA CLIENTE / POTENCIAL UPGRADE',
+                detalhes: {
+                    idade: '25 anos', profissao: 'Professora', contato: '(11) 98888-9000 (WhatsApp)',
+                    resumo: 'Primeira revisão. Jovem, cuida bem do veículo, mas sonha com modelo mais moderno (Tracker). Foco em conquistar lealdade.',
+                    estrategia: '💛 AÇÃO FIDELIZAÇÃO: Abordagem humanizada. Consultor deve focar em entender as necessidades futuras de espaço e tecnologia. Venda Pós-Venda: Higienização de A/C e Tapetes de Conforto.',
+                    historico: [
+                        { os: 'NOVO', data: 'N/A', km: '10.000 (Est.)', tipo: 'Primeira Revisão', status: 'Agendado', consultor: 'N/A', servicos: 'N/A', recusados: 'N/A', nps: 'N/A' }
+                    ],
+                    historicoRelacionamento: [
+                        { data: '28/11/2025', tipo: 'CRM Ativo', resumo: 'Confirmação do agendamento via WhatsApp, respondeu com emojis (bom engajamento).' }
+                    ],
+                    alertasOportunidades: [
+                        { tipo: 'OPORTUNIDADE VENDAS', mensagem: 'ALTO POTENCIAL DE UPGRADE (Tracker). Conectar com Vendas para iniciar o acompanhamento de novas campanhas.' },
+                        { tipo: 'OPORTUNIDADE PÓS-VENDA', mensagem: 'Venda Estética: Oferecer Higienização do Ar Condicionado e Proteção de Bancos.' },
+                        { tipo: 'ESTRATÉGIA', mensagem: 'Garantir que a sala de espera seja confortável e o serviço seja ágil.' }
+                    ]
+                }
+            },
+            {
+                id: 'A002', hora: '09:30', nome: 'Silvia Costa', veiculo: 'Spin Premier 2023', placa: 'SLV-2023', servico: 'Revisão 40.000 km', perfil: 'CLIENTE GARANTIA / TRANSACIONAL',
+                detalhes: {
+                    idade: '42 anos', profissao: 'Proprietária de Loja Online', contato: '(11) 95555-1234 (WhatsApp)',
+                    resumo: 'Foco em custo-benefício. Altamente sensível a preço. Risco de Evasão (Fim da Garantia em Fev/2026).',
+                    estrategia: '🔵 AÇÃO RETENÇÃO: Foco total em AGILIDADE (Revisão Rápida). Oferecer Pacotes de Troca de Óleo Pós-Garantia. Abordagem 100% consultiva em SEGURANÇA (ex: Fluido de Freio).',
+                    historico: [
+                        { os: '115510', data: '17/11/2025', km: '30.100', tipo: 'Revisão 30.000 km', status: 'Aprovado (Básico)', consultor: 'Sênior', servicos: 'Óleo, Filtros, Velas', recusados: 'Alinhamento, Limpeza A/C, Fluido Freio', nps: '3/5' },
+                        { os: '110450', data: '25/04/2025', km: '20.050', tipo: 'Revisão 20.000 km', status: 'Aprovado (Básico)', consultor: 'Sênior', servicos: 'Óleo, Filtros', recusados: 'Limpeza TBI, Rodízio Pneus', nps: '3/5' }
+                    ],
+                    historicoRelacionamento: [
+                        { data: '01/11/2025', tipo: 'CRM Ativo', resumo: 'Solicitou orçamento detalhado (peças e M.O.) por escrito antes de confirmar o agendamento da 30k.' },
+                        { data: '26/04/2025', tipo: 'NPS/Comentário', resumo: 'Reclamou da "insistência do consultor para adicionar serviços que não estão no manual".' },
+                        { data: '15/08/2024', tipo: 'CRM Ativo', resumo: 'Confirmou que pesquisou o preço da revisão em outras duas concessionárias antes de agendar.' }
+                    ],
+                    alertasOportunidades: [
+                        { tipo: 'ALERTA', mensagem: 'RISCO MÁXIMO DE EVASÃO: Garantia acaba em Fev/2026. A 40k é a última obrigatória.' },
+                        { tipo: 'OPORTUNIDADE', mensagem: 'Venda Consultiva: Focar em SEGURANÇA (Fluido de Freio) e ECONOMIA (Rodízio/Alinhamento para durabilidade do pneu).' },
+                        { tipo: 'RETENÇÃO', mensagem: 'Migração para Pós-Garantia: Oferta proativa de pacotes promocionais de troca de óleo (competitivo).' }
+                    ]
+                }
+            },
+            {
+                id: 'B001', hora: '10:30', nome: 'João Victor Lima', veiculo: 'Onix Plus Premier 2025', placa: 'JVL-3300', servico: 'Revisão 10.000 km', perfil: 'NOVO CLIENTE / PREMIUM / TECNOLÓGICO',
+                detalhes: {
+                    idade: '33 anos', profissao: 'Engenheiro Civil', contato: '(11) 97777-3300 (WhatsApp)',
+                    resumo: 'Primeira revisão. Gosta de viajar e testar novas tecnologias automotivas. Alto potencial para upgrades de performance e conectividade.',
+                    estrategia: '✅ AÇÃO UPGRADE: Foco em Aditivos de performance e Proteção de motor. Oferecer renovação do OnStar/Wi-Fi e Acessórios de viagem (bagageiro, suporte).',
+                    historico: [
+                        { os: 'NOVO', data: 'N/A', km: '10.000 (Est.)', tipo: 'Primeira Revisão', status: 'Agendado', consultor: 'N/A', servicos: 'N/A', recusados: 'N/A', nps: 'N/A' }
+                    ],
+                    historicoRelacionamento: [
+                        { data: '28/11/2025', tipo: 'CRM Ativo', resumo: 'Respondeu à confirmação do agendamento perguntando sobre a duração da Revisão Rápida.' }
+                    ],
+                    alertasOportunidades: [
+                        { tipo: 'OPORTUNIDADE', mensagem: 'Venda de Desempenho: Aditivo de combustível GM e Verificação de Alinhamento (viagens).' },
+                        { tipo: 'OPORTUNIDADE', mensagem: 'Acessórios: Protetor de cárter e Frisos laterais para viagens longas (proteção).' },
+                        { tipo: 'ESTRATÉGIA', mensagem: 'Usar termos como "performance" e "durabilidade em alta velocidade".' }
+                    ]
+                }
+            },
+            {
+                id: 'A003', hora: '11:00', nome: 'Lúcia Martins', veiculo: 'Tracker Premier 2022', placa: 'LUA-2022', servico: 'Diagnóstico (Start-Stop/Sensores)', perfil: 'DETRATORA / DIFICULDADE TECNOLÓGICA',
+                detalhes: {
+                    idade: '65 anos', profissao: 'Aposentada', contato: '(11) 3333-8888 (Residencial - LIGAR)',
+                    resumo: 'Confunde tecnologia com defeito. Exige atendimento humanizado e pessoal. NPS 1/5.',
+                    estrategia: '💛 AÇÃO HUMANIZADA: Receber na porta. ESCUTAR ativamente. Ajustar MyLink para "Conforto/Silêncio". Não usar WhatsApp. Reconectar Bluetooth/Rádio na entrega (Mimo).',
+                    historico: [
+                        { os: '117050', data: '14/11/2025', km: '22.300', tipo: 'Diagnóstico (Start-Stop)', status: 'Fechado (Sem Defeito)', consultor: 'Júnior', servicos: 'Diagnóstico eletrônico', recusados: 'Nenhum', nps: '1/5' },
+                        { os: '112100', data: '10/05/2025', km: '20.000', tipo: 'Revisão 20.000 km', status: 'Aprovado (Básico)', consultor: 'Sênior', servicos: 'Óleo e Filtros', recusados: 'Tapetes de PVC', nps: '2/5' }
+                    ],
+                    historicoRelacionamento: [
+                        { data: '14/11/2025', tipo: 'Reclamação Presencial', resumo: 'Reclamou que o Consultor Júnior "falou grego" e não teve paciência para explicar o Start-Stop.' },
+                        { data: '15/11/2025', tipo: 'Alerta SAC', resumo: 'Abriu chamado no 0800 perguntando como desativa "todos os sensores", pois os apitos a deixam nervosa.' },
+                        { data: '11/05/2025', tipo: 'NPS/Comentário', resumo: 'Reclamou que desconfiguraram o rádio dela e que "ninguém teve paciência de ensinar".' }
+                    ],
+                    alertasOportunidades: [
+                        { tipo: 'ALERTA', mensagem: 'PRIORIDADE: Atendimento do Gerente ou Consultor Sênior. Proibido usar WhatsApp.' },
+                        { tipo: 'ESTRATÉGIA', mensagem: 'Ajustar no MyLink as configurações de alertas e sensores para o modo menos intrusivo (Conforto).' },
+                        { tipo: 'OPORTUNIDADE', mensagem: 'Venda Tangível: Oferecer Protetor de Cárter ou Jogo de Tapetes de PVC (Bandeja). Coisas que ela entende a função física de proteção.' }
+                    ]
+                }
+            },
+            {
+                id: 'B003', hora: '13:00', nome: 'Paulo Nogueira', veiculo: 'S10 High Country 2025', placa: 'S10-5200', servico: 'Revisão 10.000 km (Diesel)', perfil: 'NOVO CLIENTE / FROTISTA B2C / STATUS',
+                detalhes: {
+                    idade: '52 anos', profissao: 'Representante Comercial', contato: '(11) 96666-5200 (Celular)',
+                    resumo: 'Primeira revisão. Uso severo (trabalho). Valoriza potência, robustez e confiança no Pós-Venda Diesel.',
+                    estrategia: '⚙️ AÇÃO DIESEL/STATUS: Foco em Robustez e Confiabilidade. Vender Aditivos Diesel Premium e Pacote de Limpeza de Injeção. Oferecer Acessórios de proteção (Protetor de caçamba/Engate homologado).',
+                    historico: [
+                        { os: 'NOVO', data: 'N/A', km: '10.000 (Est.)', tipo: 'Primeira Revisão', status: 'Agendado', consultor: 'N/A', servicos: 'N/A', recusados: 'N/A', nps: 'N/A' }
+                    ],
+                    historicoRelacionamento: [
+                        { data: '28/11/2025', tipo: 'Agendamento', resumo: 'Agendou a primeira revisão por telefone, mencionando a importância da qualidade do serviço diesel.' }
+                    ],
+                    alertasOportunidades: [
+                        { tipo: 'OPORTUNIDADE', mensagem: 'Venda de Proteção: Oferecer Protetor de Caçamba e Capota Marítima. Ítens essenciais para uso comercial.' },
+                        { tipo: 'OPORTUNIDADE DIESEL', mensagem: 'Pacote de manutenção preventiva de injeção (preparar para a de 20k/40k).' },
+                        { tipo: 'ESTRATÉGIA', mensagem: 'Garantir que o Técnico Diesel (Mecânico Especialista) valide o serviço e entregue o carro limpo (Status).' }
+                    ]
+                }
+            },
+            {
+                id: 'A004', hora: '14:00', nome: 'André Pires', veiculo: 'Montana 2020 (Frota)', placa: 'XYZ-1010', servico: 'Revisão 120.000 km (Frota)', perfil: 'HÍBRIDO / GESTOR DE FROTA',
+                detalhes: {
+                    idade: '37 anos', profissao: 'Empresário (Logística)', contato: '(11) 97777-0000 (WhatsApp Business)',
+                    resumo: 'Racionalidade extrema. Possui 3 Montanas (Custo) e uma Equinox Premier (Premium). NPS 4/5.',
+                    estrategia: '💚 AÇÃO B2B: Foco em "Eficiência" e "Parceria Comercial". Oferecer Pacotes de Manutenção Preventiva para as 3 Montanas (preço de frotista). Acionar Vendas (Vendas Diretas) para apresentar estudos de CUSTO POR KM das novas versões.',
+                    historico: [
+                        { os: '117500', data: '20/10/2025', km: '119.500', tipo: 'Corretiva/Injeção', status: 'Aprovado Parcial', consultor: 'Sênior', servicos: 'Cabos e Velas (Peças Genuínas)', recusados: 'Limpeza Bicos, Descarbonização (fez fora)', nps: '4/5' },
+                        { os: '115000', data: '05/09/2025', km: '110.000', tipo: 'Revisão 110.000 km', status: 'Aprovado (Básico)', consultor: 'Sênior', servicos: 'Óleo e Filtros', recusados: 'Troca de Pneus', nps: '4/5' }
+                    ],
+                    historicoRelacionamento: [
+                        { data: '20/10/2025', tipo: 'Negociação (WhatsApp)', resumo: 'Questionou o valor da mão de obra para a Montana e negociou fazer apenas peças conosco.' },
+                        { data: '06/09/2025', tipo: 'NPS/Comentário', resumo: 'Nota 4/5, mas com ressalvas: "Preço da hora trabalhada para carros de frota antiga (Montanas) está fora da realidade do mercado."' },
+                        { data: 'Mensal', tipo: 'Balcão de Peças', resumo: 'Compra filtros e óleo a granel conosco para trocar na oficina da transportadora dele ("Peças Atacado").' }
+                    ],
+                    alertasOportunidades: [
+                        { tipo: 'OPORTUNIDADE DE OURO', mensagem: 'Vendas Diretas: Acionar para apresentar estudos de Custo por KM rodado da Nova Montana (foco em economia de combustível).' },
+                        { tipo: 'ESTRATÉGIA', mensagem: 'Foco no "Preço de Frotista": Oferecer pacotes de Correia Dentada/Embreagem com desconto progressivo (Volume).' },
+                        { tipo: 'TECNOLOGIA', mensagem: 'Usar Equinox como vitrine: Mostrar a ele o potencial do OnStar para rastreamento de frotas.' }
+                    ]
+                }
+            },
+            {
+                id: 'B004', hora: '15:00', nome: 'Lucas Ribeiro', veiculo: 'Montana RS 2025', placa: 'MTR-2700', servico: 'Revisão 10.000 km', perfil: 'NOVO CLIENTE / JOVEM / TECNOLÓGICO',
+                detalhes: {
+                    idade: '27 anos', profissao: 'Analista de TI', contato: '(11) 95555-2700 (WhatsApp)',
+                    resumo: 'Primeira revisão. Analista de TI, valoriza tecnologia e o design esportivo (RS). Busca conectividade e estilo.',
+                    estrategia: '💻 AÇÃO TECH: Vender UPGRADE de conectividade (Renovação OnStar/Wi-Fi). Foco em Acessórios RS (personalização, iluminação). Consultor deve falar sobre as últimas atualizações de software.',
+                    historico: [
+                        { os: 'NOVO', data: 'N/A', km: '10.000 (Est.)', tipo: 'Primeira Revisão', status: 'Agendado', consultor: 'N/A', servicos: 'N/A', recusados: 'N/A', nps: 'N/A' }
+                    ],
+                    historicoRelacionamento: [
+                        { data: '28/11/2025', tipo: 'CRM Ativo', resumo: 'Agendou via site. Perguntou no chat sobre a possibilidade de instalar iluminação interna personalizada.' }
+                    ],
+                    alertasOportunidades: [
+                        { tipo: 'OPORTUNIDADE', mensagem: 'Acessórios RS: Oferecer personalização estética e acessórios de iluminação interna.' },
+                        { tipo: 'OPORTUNIDADE', mensagem: 'Venda de Conectividade: Renovar pacote OnStar e o plano de Wi-Fi nativo.' },
+                        { tipo: 'ESTRATÉGIA', mensagem: 'Falar de tecnologia e as últimas novidades do MyLink.' }
+                    ]
+                }
+            },
+            {
+                id: 'A005', hora: '15:30', nome: 'Carlos Menezes', veiculo: 'Onix Hatch 2023', placa: 'RKM-2023', servico: 'Manutenção Pneu/Rodízio', perfil: 'PREMIUM / ENTUSIASTA',
+                detalhes: {
+                    idade: '48 anos', profissao: 'Gerente Administrativo', contato: '(11) 98765-4321 (WhatsApp)',
+                    resumo: 'Fiel à marca, foco em segurança e qualidade total. Compra serviços preventivos. NPS 5/5.',
+                    estrategia: '⭐ AÇÃO VIP: Cliente de Alto Valor. Manter a satisfação (NPS 5). Oferecer Vitrificação de Pintura ou Acessórios de Tecnologia. CLIENTE DE ALTO POTENCIAL DE UPGRADE.',
+                    historico: [
+                        { os: '115480', data: '02/11/2025', km: '29.850', tipo: 'Revisão 30.000 km', status: 'Aprovado Total', consultor: 'Sênior', servicos: 'Revisão Básica + Alinhamento + Higienização A/C + Fluido Freio', recusados: 'Nenhum', nps: '5/5' },
+                        { os: '110320', data: '18/03/2025', km: '19.910', tipo: 'Revisão 20.000 km', status: 'Aprovado Total', consultor: 'Sênior', servicos: 'Revisão Básica + Rodízio + Hidratação Couro', recusados: 'Nenhum', nps: '5/5' }
+                    ],
+                    historicoRelacionamento: [
+                        { data: '03/11/2025', tipo: 'NPS/Comentário', resumo: 'Nota 5/5: "Atendimento do Consultor foi excelente, como sempre. Confiabilidade é tudo, por isso só levo o carro aí."' },
+                        { data: '20/10/2025', tipo: 'CRM Ativo', resumo: 'Agendou a revisão de 30k no primeiro contato via WhatsApp (alta disponibilidade).' },
+                        { data: '15/06/2025', tipo: 'Oportunidade Vendas', resumo: 'Contatou Vendas (via site) para avaliar a troca do Onix por uma Nova Tracker RS. Negociação em stand-by.' }
+                    ],
+                    alertasOportunidades: [
+                        { tipo: 'OPORTUNIDADE DE VENDAS', mensagem: 'ALTO POTENCIAL DE UPGRADE! Conectar com Vendas para agendar uma demonstração do novo modelo Tracker RS.' },
+                        { tipo: 'OPORTUNIDADE PÓS-VENDA', mensagem: 'Venda Estética/Tecnologia: Oferecer Vitrificação de Pintura (proteção de longo prazo) ou renovação do OnStar/Wi-Fi.' },
+                        { tipo: 'ALERTA', mensagem: 'Manter o padrão de excelência (NPS 5). O consultor Sênior deve fazer o acompanhamento.' }
+                    ]
+                }
+            },
+            {
+                id: 'B005', hora: '16:30', nome: 'Fernanda Alves', veiculo: 'Spin 2025', placa: 'SPN-3600', servico: 'Revisão 10.000 km', perfil: 'NOVA CLIENTE / FAMILIAR / SEGURANÇA',
+                detalhes: {
+                    idade: '36 anos', profissao: 'Enfermeira', contato: '(11) 98888-3600 (Celular)',
+                    resumo: 'Primeira revisão. Preocupada com segurança, manutenção e espaço para os filhos (Spin). Busca conforto e praticidade.',
+                    estrategia: '🛡️ AÇÃO FAMÍLIA: Vender Segurança e Higiene. Foco em higienização A/C (saúde dos filhos) e verificação detalhada de freios/pneus. Oferecer Revisão Rápida (otimizar o tempo dela).',
+                    historico: [
+                        { os: 'NOVO', data: 'N/A', km: '10.000 (Est.)', tipo: 'Primeira Revisão', status: 'Agendado', consultor: 'N/A', servicos: 'N/A', recusados: 'N/A', nps: 'N/A' }
+                    ],
+                    historicoRelacionamento: [
+                        { data: '28/11/2025', tipo: 'CRM Ativo', resumo: 'Agendou para as 16:30 (horário pós-expediente). Solicitou saber se o serviço termina antes das 18h.' }
+                    ],
+                    alertasOportunidades: [
+                        { tipo: 'PRIORIDADE', mensagem: 'AGILIDADE. Garantir entrega antes do prazo para atender à agenda pós-expediente.' },
+                        { tipo: 'OPORTUNIDADE', mensagem: 'Venda Saúde/Segurança: Higienização de A/C. Checagem detalhada de pneus e freios.' },
+                        { tipo: 'OPORTUNIDADE', mensagem: 'Acessórios: Tapetes de borracha (bandeja) para proteger o carpete (crianças).' }
+                    ]
+                }
+            }
+        ];
+
+        let selectedClient = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Adiciona o listener para o novo botão 'Iniciar'
+            document.getElementById('botaoIniciar').addEventListener('click', handleIniciar);
+            
+            // Listener existente para o login
+            document.getElementById('loginForm').addEventListener('submit', handleLogin);
+        });
+
+        // --- NOVA FUNÇÃO: INICIAR O SISTEMA ---
+        function handleIniciar() {
+            document.getElementById('telaCapa').classList.add('hidden');
+            document.getElementById('telaLogin').classList.remove('hidden');
+            // Garante que a tela de login use a classe flex para centralização
+            document.getElementById('telaLogin').classList.add('flex'); 
+        }
+
+        // --- LÓGICA DE NAVEGAÇÃO E AUTENTICAÇÃO ---
+        function handleLogin(event) {
+            event.preventDefault();
+            const login = document.getElementById('login').value;
+            const senha = document.getElementById('senha').value;
+            const mensagemErro = document.getElementById('mensagemErro');
+
+            if (login === 'simulação' && senha === '1234') {
+                document.getElementById('telaLogin').classList.add('hidden');
+                document.getElementById('telaDashboard').classList.remove('hidden');
+                renderDashboard();
+            } else {
+                mensagemErro.textContent = 'Login ou Senha incorretos. Tente "simulação" e "1234".';
+                mensagemErro.classList.remove('hidden');
+            }
+        }
+
+        // --- RENDERIZAÇÃO DO DASHBOARD (AGENDA) ---
+        function renderDashboard() {
+            const agendaList = document.getElementById('agendaList');
+            agendaList.innerHTML = '';
+
+            // Ordenar a lista pela hora do agendamento
+            clientesData.sort((a, b) => {
+                const timeA = new Date(`2000/01/01 ${a.hora}`);
+                const timeB = new Date(`2000/01/01 ${b.hora}`);
+                return timeA - timeB;
+            });
+
+            clientesData.forEach(cliente => {
+                const badgeColor = getBadgeColor(cliente.perfil);
+                const item = `
+                    <li onclick="showClientDetail('${cliente.id}')"
+                        class="cursor-pointer p-4 bg-white rounded-xl shadow hover:shadow-lg transition duration-200 border-l-4 ${badgeColor.border}">
+                        <div class="flex items-center justify-between">
+                            <div class="flex-grow">
+                                <p class="text-xs font-semibold text-gray-500">${cliente.hora}</p>
+                                <p class="text-lg font-bold text-gm-blue">${cliente.nome}</p>
+                                <p class="text-sm text-gray-700">${cliente.veiculo} - <span class="font-medium text-gray-600">${cliente.placa}</span></p>
+                            </div>
+                            <div class="text-right">
+                                <span class="px-3 py-1 text-xs font-semibold rounded-full ${badgeColor.bg} text-white">${cliente.perfil}</span>
+                                <p class="text-sm text-gray-500 mt-1">${cliente.servico}</p>
+                            </div>
+                        </div>
+                    </li>
+                `;
+                agendaList.innerHTML += item;
+            });
+        }
+
+        function getBadgeColor(perfil) {
+            if (perfil.includes('PREMIUM') || perfil.includes('ENTUSIASTA')) return { bg: 'bg-green-600', border: 'border-green-600' };
+            if (perfil.includes('DETRATORA') || perfil.includes('LITIGIOSA')) return { bg: 'bg-red-600', border: 'border-red-600' };
+            if (perfil.includes('GARANTIA') || perfil.includes('TRANSACIONAL')) return { bg: 'bg-yellow-600', border: 'border-yellow-600' };
+            if (perfil.includes('HÍBRIDO') || perfil.includes('FROTA')) return { bg: 'bg-indigo-600', border: 'border-indigo-600' };
+            if (perfil.includes('NOVA CLIENTE') || perfil.includes('NOVO CLIENTE')) return { bg: 'bg-blue-600', border: 'border-blue-600' };
+            return { bg: 'bg-gray-500', border: 'border-gray-500' };
+        }
+
+        // --- RENDERIZAÇÃO DOS DETALHES DO CLIENTE ---
+        function showClientDetail(id) {
+            selectedClient = clientesData.find(c => c.id === id);
+            if (!selectedClient) return;
+
+            document.getElementById('detalheNome').textContent = selectedClient.nome;
+            document.getElementById('detalhePerfil').innerHTML = `<span class="px-3 py-1 text-xs font-semibold rounded-full ${getBadgeColor(selectedClient.perfil).bg} text-white">${selectedClient.perfil}</span>`;
+            document.getElementById('detalheVeiculo').textContent = `${selectedClient.veiculo} | Placa: ${selectedClient.placa}`;
+            
+            // Renderizar Detalhes Pessoais e Estratégia (Mantidos abertos)
+            document.getElementById('detalheIdade').textContent = selectedClient.detalhes.idade;
+            document.getElementById('detalheProfissao').textContent = selectedClient.detalhes.profissao;
+            document.getElementById('detalheContato').textContent = selectedClient.detalhes.contato;
+            document.getElementById('detalheResumo').textContent = selectedClient.detalhes.resumo;
+            document.getElementById('detalheEstrategia').textContent = selectedClient.detalhes.estrategia;
+            
+            // Renderizar as 3 seções colapsáveis
+            renderHistoricoOS(selectedClient.detalhes.historico);
+            renderHistoricoRelacionamento(selectedClient.detalhes.historicoRelacionamento);
+            renderAlertasOportunidades(selectedClient.detalhes.alertasOportunidades);
+
+
+            // Exibir o modal
+            document.getElementById('detalheCliente').classList.remove('hidden');
+            document.getElementById('detalheCliente').classList.add('flex');
+            document.body.classList.add('overflow-hidden');
+        }
+
+        function closeClientDetail() {
+            document.getElementById('detalheCliente').classList.add('hidden');
+            document.getElementById('detalheCliente').classList.remove('flex');
+            document.body.classList.remove('overflow-hidden');
+        }
+
+        // --- Funções de Renderização dos Tópicos ---
+
+        function renderHistoricoOS(historico) {
+            const list = document.getElementById('historicoOSList');
+            list.innerHTML = '';
+            historico.forEach(os => {
+                // Mapeamento da Escala NPS 0-5
+                // Promotor (4 ou 5) = Verde
+                // Neutro (3) = Amarelo
+                // Detrator (0, 1 ou 2) = Vermelho
+                const npsValue = os.nps;
+                const npsScore = parseInt(npsValue.charAt(0), 10);
+                let npsColor;
+
+                if (npsValue === 'N/A') {
+                    npsColor = 'bg-gray-200 text-gray-700';
+                } else if (npsScore >= 4) {
+                    npsColor = 'bg-green-100 text-green-700';
+                } else if (npsScore === 3) {
+                    npsColor = 'bg-yellow-100 text-yellow-700';
+                } else {
+                    npsColor = 'bg-red-100 text-red-700';
+                }
+
+                const osItem = `
+                    <div class="border p-3 rounded-lg mb-2 bg-gray-50">
+                        <div class="flex justify-between items-center mb-1">
+                            <p class="font-bold text-gm-blue">OS #${os.os} (${os.tipo})</p>
+                            <span class="text-xs font-semibold ${npsColor} px-2 py-0.5 rounded-full">NPS: ${os.nps}</span>
+                        </div>
+                        <p class="text-xs text-gray-500">Data: ${os.data} | KM: ${os.km} | Consultor: ${os.consultor}</p>
+                        <p class="text-sm mt-1">**Serviços Realizados:** <span class="font-medium text-gray-700">${os.servicos}</span></p>
+                        <p class="text-sm mt-1">**Itens Recusados:** <span class="text-red-500">${os.recusados || 'Nenhum'}</span></p>
+                        <p class="text-xs mt-1 text-gray-600">Status: ${os.status}</p>
+                    </div>
+                `;
+                list.innerHTML += osItem;
+            });
+        }
+
+        function renderHistoricoRelacionamento(historico) {
+            const list = document.getElementById('historicoRelacionamentoList');
+            list.innerHTML = '';
+            if (historico.length === 0) {
+                 list.innerHTML = '<p class="text-sm text-gray-500 italic">Nenhum histórico de relacionamento registrado (Primeira visita ou cliente novo).</p>';
+                 return;
+            }
+            historico.forEach(item => {
+                const badgeColor = item.tipo.includes('NPS') || item.tipo.includes('CRM') ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700';
+                const relItem = `
+                    <div class="p-3 border-b border-gray-100">
+                        <div class="flex justify-between items-start">
+                            <p class="font-semibold text-gray-800">${item.resumo}</p>
+                            <span class="text-xs font-medium ${badgeColor} px-2 py-0.5 rounded-full ml-3">${item.tipo}</span>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-1">Data: ${item.data}</p>
+                    </div>
+                `;
+                list.innerHTML += relItem;
+            });
+        }
+
+        function renderAlertasOportunidades(alertas) {
+            const list = document.getElementById('alertasOportunidadesList');
+            list.innerHTML = '';
+            alertas.forEach(alerta => {
+                const icon = alerta.tipo.includes('ALERTA') || alerta.tipo.includes('CRÍTICA') ? '🔴' :
+                             alerta.tipo.includes('OPORTUNIDADE') || alerta.tipo.includes('VENDAS') ? '✅' : '⚙️';
+                const color = alerta.tipo.includes('ALERTA') || alerta.tipo.includes('CRÍTICA') ? 'text-red-700' : 'text-gray-800';
+                
+                const alertItem = `
+                    <li class="flex items-start space-x-2 py-2 border-b last:border-b-0 border-gray-100">
+                        <span class="text-lg">${icon}</span>
+                        <div>
+                            <p class="font-bold text-sm ${color}">${alerta.tipo}:</p>
+                            <p class="text-sm text-gray-700">${alerta.mensagem}</p>
+                        </div>
+                    </li>
+                `;
+                list.innerHTML += alertItem;
+            });
+        }
+    </script>
+
+    <!-- 0. TELA DA CAPA (Nova) -->
+    <div id="telaCapa" class="min-h-screen flex items-center justify-center p-8">
+        <div class="card-capa text-center p-8 rounded-2xl border-4 shadow-2xl max-w-4xl w-full"
+             style="background-color: rgba(255, 255, 255, 0.9);">
+            <h1 class="title-capa text-4xl sm:text-6xl font-black mb-6 tracking-wide leading-tight">
+                A IMPORTÂNCIA DE ESTAR BEM PREPARADO
+            </h1>
+            <p class="subtitle-capa text-xl sm:text-2xl font-light mb-12">
+                Simulador Operacional do Programa Service Collaboration Chevrolet
+            </p>
+            
+            <button id="botaoIniciar"
+                    class="button-capa px-12 py-4 text-xl font-bold rounded-full shadow-lg hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-opacity-50">
+                Iniciar a Simulação
+            </button>
+
+            <p class="mt-12 text-sm brand-info">
+                Desenvolvido por Pós-Venda GM - Sua Concessionária
+            </p>
+        </div>
+    </div>
+
+    <!-- 1. TELA DE LOGIN -->
+    <div id="telaLogin" class="hidden min-h-screen items-center justify-center bg-gray-100">
+        <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md transform transition duration-500 hover:scale-[1.02]">
+            <div class="text-center mb-6">
+                <!-- Ícone GM/Chevrolet simples usando SVG ou Texto -->
+                <div class="text-6xl font-bold text-gm-blue mb-2">GM</div>
+                <h1 class="text-2xl font-bold text-gm-blue">CRM PÓS-VENDA CHEVROLET</h1>
+                <p class="text-sm text-gray-500">Acesso Operacional</p>
+            </div>
+            
+            <form id="loginForm" class="space-y-6">
+                <div>
+                    <label for="login" class="block text-sm font-medium text-gray-700">Login (Usuário)</label>
+                    <input type="text" id="login" name="login" required placeholder="simulação"
+                           class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-gm-blue focus:border-gm-blue transition">
+                </div>
+                <div>
+                    <label for="senha" class="block text-sm font-medium text-gray-700">Senha</label>
+                    <input type="password" id="senha" name="senha" required placeholder="1234"
+                           class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-gm-blue focus:border-gm-blue transition">
+                </div>
+                
+                <p id="mensagemErro" class="hidden text-sm text-red-600 font-medium text-center"></p>
+
+                <button type="submit"
+                        class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-md text-sm font-bold text-white bg-gm-blue hover:bg-opacity-90 transition duration-150 transform hover:scale-[1.01] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gm-blue">
+                    Acessar o Sistema
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 2. TELA DE DASHBOARD (Agenda) -->
+    <div id="telaDashboard" class="hidden min-h-screen bg-gray-50 p-4 md:p-8">
+        <header class="bg-white rounded-xl shadow-gm p-4 mb-6 sticky top-0 z-10">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <h1 class="text-2xl font-extrabold text-gm-blue">AGENDA PÓS-VENDA</h1>
+                    <span class="ml-4 text-gray-500 font-semibold text-lg hidden sm:block">| Terça-feira, 29 de Novembro de 2025</span>
+                </div>
+                <button onclick="window.location.reload()"
+                        class="text-sm font-medium text-red-600 hover:text-red-800 transition">
+                    Sair / Logout
+                </button>
+            </div>
+            <p class="text-sm text-gray-500 mt-1">Pré-Check Operacional: Clientes Agendados para Amanhã.</p>
+        </header>
+
+        <main class="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div class="lg:col-span-2 xl:col-span-3">
+                <h2 class="text-xl font-bold text-gray-800 mb-4 border-b border-gm-blue pb-2">Serviços Agendados</h2>
+                <ul id="agendaList" class="space-y-4">
+                    <!-- Lista de clientes será renderizada aqui pelo JavaScript -->
+                </ul>
+            </div>
+
+            <!-- Painel de Dicas Rápidas para o Consultor -->
+            <div class="lg:col-span-1 xl:col-span-1">
+                <h2 class="text-xl font-bold text-gray-800 mb-4 border-b border-gm-blue pb-2">Resumo e Prioridades</h2>
+                <div class="bg-white p-6 rounded-xl shadow-lg space-y-4">
+                    <p class="font-bold text-gm-blue">Seu Foco Amanhã:</p>
+                    <ul class="text-sm space-y-3">
+                        <li class="border-l-4 border-red-600 pl-3">**Gerenciamento de Crise:** 2 Detratores (Beatriz e Lúcia). Requer Gerente/Consultor Sênior.</li>
+                        <li class="border-l-4 border-yellow-600 pl-3">**Risco de Evasão:** Silvia Costa (Cliente Garantia). Foco em retenção Pós-Garantia.</li>
+                        <li class="border-l-4 border-indigo-600 pl-3">**Oportunidade B2B:** André Pires (Frota). Conexão imediata com Vendas Diretas.</li>
+                        <li class="border-l-4 border-green-600 pl-3">**Ticket Premium:** Carlos Menezes (Entusiasta). Cliente que aprova serviços adicionais e troca carro.</li>
+                        <li class="border-l-4 border-blue-600 pl-3">**Lealdade em Jogo:** 5 Novos Clientes. Foco em construir confiança e oferecer serviços agregados na 1ª visita.</li>
+                    </ul>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- 3. MODAL DE DETALHE DO CLIENTE (O CRM Profile) -->
+    <div id="detalheCliente" class="hidden fixed inset-0 z-50 bg-black bg-opacity-50 justify-end">
+        <div onclick="closeClientDetail()" class="absolute inset-0"></div>
+        <div class="bg-gray-50 w-full md:w-3/4 lg:w-1/2 xl:w-2/5 h-full overflow-y-auto shadow-2xl relative transform translate-x-0">
+            
+            <!-- Cabeçalho do Detalhe -->
+            <div class="bg-gm-blue text-white p-6 sticky top-0 z-20 shadow-lg">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-2xl font-extrabold" id="detalheNome">Nome do Cliente</h2>
+                    <button onclick="closeClientDetail()" class="text-white hover:text-gm-gold transition">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+                <div class="mt-1 flex items-center space-x-3">
+                    <span id="detalhePerfil">Perfil</span>
+                    <p class="text-sm font-medium text-gray-200" id="detalheVeiculo">Veículo e Placa</p>
+                </div>
+            </div>
+
+            <div class="p-6 space-y-8">
+                
+                <!-- SEÇÃO 1: ESTRATÉGIA DE ABORDAGEM (O Ouro do CRM) - Visível por Padrão -->
+                <section>
+                    <h3 class="text-xl font-bold text-gm-blue border-b border-gm-gold pb-1 mb-3">Estratégia de Atendimento (Pré-Check)</h3>
+                    <div class="bg-yellow-50 border-l-4 border-gm-gold p-4 rounded-lg shadow-inner">
+                        <p class="font-medium text-lg text-gray-800" id="detalheEstrategia">
+                            <!-- Estratégia de Atendimento -->
+                        </p>
+                    </div>
+                </section>
+
+                <!-- SEÇÃO 2: RESUMO DO CLIENTE - Visível por Padrão -->
+                <section>
+                    <h3 class="text-xl font-bold text-gray-800 border-b border-gray-300 pb-1 mb-3">Resumo Cadastral e Comportamento</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        <div class="p-3 bg-white rounded-lg shadow-sm">
+                            <p class="text-xs text-gray-500">Idade / Profissão</p>
+                            <p class="font-semibold text-gray-700" id="detalheIdade"></p>
+                            <p class="font-semibold text-gray-700" id="detalheProfissao"></p>
+                        </div>
+                        <div class="p-3 bg-white rounded-lg shadow-sm">
+                            <p class="text-xs text-gray-500">Contato Preferencial</p>
+                            <p class="font-semibold text-gray-700" id="detalheContato"></p>
+                        </div>
+                        <div class="md:col-span-2 p-3 bg-white rounded-lg shadow-sm">
+                            <p class="text-xs text-gray-500">Resumo Comportamental</p>
+                            <p class="font-semibold text-gray-700" id="detalheResumo"></p>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- SEÇÕES COLAPSÁVEIS -->
+                <div class="crm-details space-y-4">
+                    
+                    <!-- NOVO TÓPICO 1: HISTÓRICO DE ORDENS DE SERVIÇO (OS) -->
+                    <details>
+                        <summary>Histórico de Ordens de Serviço (OS)</summary>
+                        <div class="content">
+                            <div id="historicoOSList" class="space-y-3">
+                                <!-- Histórico de OS será renderizado aqui -->
+                            </div>
+                            <p class="text-sm text-gray-500 mt-4">**Observação:** Focar nos "Itens Recusados" para nova abordagem de venda consultiva.</p>
+                        </div>
+                    </details>
+
+                    <!-- NOVO TÓPICO 2: HISTÓRICO DE RELACIONAMENTO (Contatos) -->
+                    <details>
+                        <summary>Histórico de Relacionamento (Contatos)</summary>
+                        <div class="content">
+                            <div id="historicoRelacionamentoList" class="space-y-3">
+                                <!-- Histórico de Relacionamento será renderizado aqui -->
+                            </div>
+                            <p class="text-sm text-gray-500 mt-4">**Observação:** Anotações de NPS, reclamações e interações via canais digitais/voz.</p>
+                        </div>
+                    </details>
+
+                    <!-- NOVO TÓPICO 3: ALERTAS E OPORTUNIDADES (Vendas/Retenção) -->
+                    <details>
+                        <summary>Alertas e Oportunidades (Vendas & Retenção)</summary>
+                        <div class="content">
+                            <ul id="alertasOportunidadesList" class="space-y-3">
+                                <!-- Alertas e Oportunidades serão renderizados aqui -->
+                            </ul>
+                            <p class="text-sm text-gray-500 mt-4">**Observação:** Ações que devem ser tomadas hoje para aumentar o ticket ou evitar a evasão.</p>
+                        </div>
+                    </details>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
