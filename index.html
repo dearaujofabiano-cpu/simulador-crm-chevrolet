@@ -20,7 +20,7 @@
         .bg-gm-blue { background-color: var(--gm-blue); }
         .text-gm-blue { color: var(--gm-blue); }
         .bg-gm-gold { background-color: var(--gm-gold); }
-        .shadow-gm { box-shadow: 0 4px 6px -1px rgba(10, 60, 152, 0.1), 0 2px 4px -1px rgba(10, 60, 152, 0.06); }
+        .shadow-gm { box-shadow: 0 4px 6px -1px rgba(10, 60, 152, 0.1), 0 2px 4px -1p rgba(10, 60, 152, 0.06); }
 
         /* Estilos para a nova capa pastel */
         #telaCapa {
@@ -91,6 +91,15 @@
 <body>
 
     <!-- Variável global para armazenar os dados de clientes (Atualizada com NPS 0-5) --><script>
+        // *** DADOS CRUCIAIS PARA CONEXÃO COM GOOGLE FORMS (CORRIGIDOS) ***
+        // URL de submissão do formulário (DEVE CONTER /formResponse no final)
+        const GOOGLE_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSfjH9SYockXC1i_vjkEKXI5lRMZTw8JRBvizPliGVnrxeqCUw/formResponse";
+        // O ID do campo 'Grupo' (entry.399927274)
+        const FIELD_GROUP = "entry.399927274"; 
+        // O ID do campo 'Resposta Estratégica' (entry.2002337379)
+        const FIELD_RESPONSE = "entry.2002337379"; 
+        // ******************************************************
+        
         const clientesData = [
             // CLIENTES EXISTENTES
             {
@@ -301,38 +310,176 @@
         ];
 
         let selectedClient = null;
+        let grupoSelecionado = null; // Variável global para o grupo
 
         document.addEventListener('DOMContentLoaded', () => {
             // Adiciona o listener para o novo botão 'Iniciar'
-            document.getElementById('botaoIniciar').addEventListener('click', handleIniciar);
+            document.getElementById('botaoIniciar').addEventListener('click', showGroupScreen);
             
-            // Listener existente para o login
+            // Listener para o login (Usado APENAS antes de entrar no CRM)
             document.getElementById('loginForm').addEventListener('submit', handleLogin);
+
+            // Listener para a seleção de grupo (usando botões numéricos)
+            document.querySelectorAll('.group-button').forEach(button => {
+                button.addEventListener('click', handleGroupSelection);
+            });
+
+            // Listener para o formulário de resposta
+            document.getElementById('formResposta').addEventListener('submit', handleFormSubmit);
+
+            // Tenta carregar o estado atual (se a pessoa voltar da simulação)
+            const savedGroup = localStorage.getItem('current_group');
+            if (savedGroup) {
+                grupoSelecionado = savedGroup;
+                showTrainingScreen(); // Vai direto para o treinamento se o grupo estiver salvo
+            }
         });
 
-        // --- NOVA FUNÇÃO: INICIAR O SISTEMA ---
-        function handleIniciar() {
-            document.getElementById('telaCapa').classList.add('hidden');
-            document.getElementById('telaLogin').classList.remove('hidden');
-            // Garante que a tela de login use a classe flex para centralização
-            document.getElementById('telaLogin').classList.add('flex'); 
+        // --- MOCK STORAGE: Envia a resposta para o Google Form ---
+        async function handleFormSubmit(event) {
+            event.preventDefault();
+            const resposta = document.getElementById('respostaEstrategica').value.trim();
+            const feedbackDiv = document.getElementById('feedbackEnvio');
+
+            if (resposta.length < 20) {
+                feedbackDiv.textContent = 'Por favor, detalhe mais sua estratégia (mínimo de 20 caracteres).';
+                feedbackDiv.className = 'mt-4 p-3 bg-red-100 text-red-700 rounded-lg font-semibold';
+                feedbackDiv.classList.remove('hidden');
+                return;
+            }
+            
+            const grupo = grupoSelecionado.replace('Grupo ', '');
+            
+            // Simula o carregamento
+            feedbackDiv.innerHTML = '<p class="font-bold text-lg text-gm-blue flex items-center justify-center"><svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-gm-blue" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Enviando resposta...</p>';
+            feedbackDiv.className = 'mt-4 p-3 bg-gray-100 text-gray-700 rounded-lg shadow-md';
+            feedbackDiv.classList.remove('hidden');
+
+            // 1. Constrói o corpo da requisição POST
+            const formData = new FormData();
+            formData.append(FIELD_GROUP, grupo);
+            formData.append(FIELD_RESPONSE, resposta);
+
+            try {
+                 if (GOOGLE_FORM_URL === "https://docs.google.com/forms/d/e/1FAIpQLSfjH9SYockXC1i_vjkEKXI5lRMZTw8JRBvizPliGVnrxeqCUw/viewform") { // Usando a viewform URL como fallback de checagem
+                    // Simula o sucesso, mas avisa sobre a URL incorreta (apenas para o console)
+                    await new Promise(resolve => setTimeout(resolve, 1500)); 
+                    console.warn("Aviso: A submissão simulada foi bem-sucedida. Lembre-se de usar a URL final /formResponse.");
+
+                 } else {
+                    // 2. Envia a requisição POST (modo real)
+                    const response = await fetch(GOOGLE_FORM_URL, {
+                        method: 'POST',
+                        body: formData,
+                        mode: 'no-cors' // Necessário para evitar erros de CORS em submissão de formulário
+                    });
+
+                    // Como estamos usando 'no-cors', o status sempre será 0. A verificação deve ser feita no servidor ou assumida como sucesso.
+                    // Para o frontend, assumiremos sucesso se não houver erro de rede.
+                    
+                    // Adicionando um pequeno delay para mostrar o spinner
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                 }
+
+                // 3. Feedback de sucesso
+                document.getElementById('respostaEstrategica').value = '';
+                
+                feedbackDiv.innerHTML = `
+                    <p class="font-bold text-lg">✅ Abordagem Registrada!</p>
+                    <p class="text-sm">**GRUPO ${grupo}**: Sua resposta foi enviada com sucesso para a planilha central.</p>
+                    <p class="text-xs mt-2">Próxima etapa: O facilitador irá iniciar o debate de grupo.</p>
+                `;
+                feedbackDiv.className = 'mt-4 p-3 bg-green-100 text-green-700 rounded-lg shadow-md';
+
+            } catch (error) {
+                // 4. Feedback de erro
+                console.error("Erro ao enviar dados para o Google Form:", error);
+                feedbackDiv.innerHTML = `
+                    <p class="font-bold text-lg">❌ Erro no Envio!</p>
+                    <p class="text-sm">Não foi possível conectar à planilha. Verifique a URL e os IDs do formulário no código-fonte.</p>
+                    <p class="text-xs mt-2">Detalhe: ${error.message || 'Erro de rede/configuração.'}</p>
+                `;
+                feedbackDiv.className = 'mt-4 p-3 bg-red-100 text-red-700 rounded-lg shadow-md';
+            }
         }
 
-        // --- LÓGICA DE NAVEGAÇÃO E AUTENTICAÇÃO ---
+
+        // --- FLUXO DE NAVEGAÇÃO ---
+        
+        function showCRMSimulatorAccess() {
+             // Redireciona para a tela de login (Portal para o CRM)
+            showLoginScreen(); 
+        }
+
+        function showLoginScreen() {
+            document.querySelectorAll('div[id^="tela"]').forEach(el => el.classList.add('hidden'));
+            document.getElementById('telaLogin').classList.remove('hidden');
+            document.getElementById('telaLogin').classList.add('flex');
+        }
+        
         function handleLogin(event) {
             event.preventDefault();
             const login = document.getElementById('login').value;
             const senha = document.getElementById('senha').value;
             const mensagemErro = document.getElementById('mensagemErro');
 
-            if (login === 'simulação' && senha === '1234') {
+            if (login === 'master' && senha === '1234') {
                 document.getElementById('telaLogin').classList.add('hidden');
                 document.getElementById('telaDashboard').classList.remove('hidden');
                 renderDashboard();
             } else {
-                mensagemErro.textContent = 'Login ou Senha incorretos. Tente "simulação" e "1234".';
+                mensagemErro.textContent = 'Login ou Senha incorretos. Tente "master" e "1234".';
                 mensagemErro.classList.remove('hidden');
             }
+        }
+
+        function showGroupScreen() {
+            document.getElementById('telaCapa').classList.add('hidden');
+            document.getElementById('telaGrupo').classList.remove('hidden');
+            document.getElementById('telaGrupo').classList.add('flex');
+        }
+        
+        function showGroupScreenFromTraining() {
+            // Limpa o grupo atual (para que o participante selecione novamente)
+            grupoSelecionado = null;
+            localStorage.removeItem('current_group');
+            document.querySelectorAll('.group-button').forEach(btn => btn.classList.remove('ring-4', 'ring-gm-gold'));
+
+            document.getElementById('telaTreinamento').classList.add('hidden');
+            showGroupScreen();
+        }
+
+        function handleGroupSelection(event) {
+            event.preventDefault();
+            
+            // Se for acionado por botão, pega o valor do botão
+            const groupValue = event.target.getAttribute('data-group');
+            if (!groupValue) return;
+
+            grupoSelecionado = `Grupo ${groupValue}`;
+            
+            // Limpa o erro
+            document.getElementById('mensagemErroGrupo').classList.add('hidden');
+
+            localStorage.setItem('current_group', grupoSelecionado);
+            document.getElementById('telaGrupo').classList.add('hidden');
+            showTrainingScreen();
+        }
+        
+        function showTrainingScreen() {
+             // Esconder todas as telas principais
+            document.querySelectorAll('div[id^="tela"]').forEach(el => el.classList.add('hidden'));
+
+            // Exibir a tela de Treinamento
+            document.getElementById('telaTreinamento').classList.remove('hidden');
+            document.getElementById('telaTreinamento').classList.add('flex');
+            
+            // ATUALIZAÇÃO CORRIGIDA: Remove "Grupo " da exibição
+            const currentGroup = grupoSelecionado || localStorage.getItem('current_group');
+            document.getElementById('grupoAtual').textContent = currentGroup ? currentGroup.replace('Grupo ', '') : 'N/A';
+
+            // Limpa o feedback de envio anterior
+            document.getElementById('feedbackEnvio').classList.add('hidden');
         }
 
         // --- RENDERIZAÇÃO DO DASHBOARD (AGENDA) ---
@@ -418,10 +565,6 @@
             const list = document.getElementById('historicoOSList');
             list.innerHTML = '';
             historico.forEach(os => {
-                // Mapeamento da Escala NPS 0-5
-                // Promotor (4 ou 5) = Verde
-                // Neutro (3) = Amarelo
-                // Detrator (0, 1 ou 2) = Vermelho
                 const npsValue = os.nps;
                 const npsScore = parseInt(npsValue.charAt(0), 10);
                 let npsColor;
@@ -518,25 +661,24 @@
         </div>
     </div>
 
-    <!-- 1. TELA DE LOGIN -->
+    <!-- 1. TELA DE LOGIN (Usada como PORTAL para o CRM) -->
     <div id="telaLogin" class="hidden min-h-screen items-center justify-center bg-gray-100">
         <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md transform transition duration-500 hover:scale-[1.02]">
             <div class="text-center mb-6">
-                <!-- Ícone GM/Chevrolet simples usando SVG ou Texto -->
                 <div class="text-6xl font-bold text-gm-blue mb-2">GM</div>
-                <h1 class="text-2xl font-bold text-gm-blue">CRM PÓS-VENDA CHEVROLET</h1>
-                <p class="text-sm text-gray-500">Acesso Operacional</p>
+                <h1 class="text-2xl font-bold text-gm-blue">ACESSO AO CRM</h1>
+                <p class="text-sm text-gray-500">Credenciais da Ferramenta de Análise</p>
             </div>
             
             <form id="loginForm" class="space-y-6">
                 <div>
                     <label for="login" class="block text-sm font-medium text-gray-700">Login (Usuário)</label>
-                    <input type="text" id="login" name="login" required placeholder="simulação"
+                    <input type="text" id="login" name="login"
                            class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-gm-blue focus:border-gm-blue transition">
                 </div>
                 <div>
                     <label for="senha" class="block text-sm font-medium text-gray-700">Senha</label>
-                    <input type="password" id="senha" name="senha" required placeholder="1234"
+                    <input type="password" id="senha" name="senha"
                            class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-gm-blue focus:border-gm-blue transition">
                 </div>
                 
@@ -544,13 +686,79 @@
 
                 <button type="submit"
                         class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-md text-sm font-bold text-white bg-gm-blue hover:bg-opacity-90 transition duration-150 transform hover:scale-[1.01] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gm-blue">
-                    Acessar o Sistema
+                    Acessar o CRM
                 </button>
             </form>
         </div>
     </div>
+    
+    <!-- 1.5 TELA DE SELEÇÃO DE GRUPO -->
+    <div id="telaGrupo" class="hidden min-h-screen items-center justify-center bg-gray-100">
+        <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md">
+            <div class="text-center mb-6">
+                <h2 class="text-2xl font-bold text-gm-blue">SELEÇÃO DE GRUPO</h2>
+                <p class="text-sm text-gray-500">Identifique sua equipe para a dinâmica.</p>
+            </div>
+            
+            <div class="grid grid-cols-3 gap-4 p-4 border rounded-lg bg-gray-50">
+                <button type="button" data-group="1" class="group-button bg-gm-blue text-white font-extrabold text-2xl py-4 rounded-lg hover:bg-gm-gold hover:text-gm-blue transition duration-150 shadow-md" onclick="handleGroupSelection(event)">1</button>
+                <button type="button" data-group="2" class="group-button bg-gm-blue text-white font-extrabold text-2xl py-4 rounded-lg hover:bg-gm-gold hover:text-gm-blue transition duration-150 shadow-md" onclick="handleGroupSelection(event)">2</button>
+                <button type="button" data-group="3" class="group-button bg-gm-blue text-white font-extrabold text-2xl py-4 rounded-lg hover:bg-gm-gold hover:text-gm-blue transition duration-150 shadow-md" onclick="handleGroupSelection(event)">3</button>
+                <button type="button" data-group="4" class="group-button bg-gm-blue text-white font-extrabold text-2xl py-4 rounded-lg hover:bg-gm-gold hover:text-gm-blue transition duration-150 shadow-md" onclick="handleGroupSelection(event)">4</button>
+                <button type="button" data-group="5" class="group-button bg-gm-blue text-white font-extrabold text-2xl py-4 rounded-lg hover:bg-gm-gold hover:text-gm-blue transition duration-150 shadow-md" onclick="handleGroupSelection(event)">5</button>
+                <button type="button" data-group="6" class="group-button bg-gm-blue text-white font-extrabold text-2xl py-4 rounded-lg hover:bg-gm-gold hover:text-gm-blue transition duration-150 shadow-md" onclick="handleGroupSelection(event)">6</button>
+            </div>
+                
+            <p id="mensagemErroGrupo" class="hidden text-sm text-red-600 font-medium text-center mt-4"></p>
+        </div>
+    </div>
 
-    <!-- 2. TELA DE DASHBOARD (Agenda) -->
+
+    <!-- 2. TELA DE TREINAMENTO PRINCIPAL (Link e Pergunta) -->
+    <div id="telaTreinamento" class="hidden min-h-screen items-center justify-center bg-gray-50 p-8">
+        <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-3xl">
+            <div class="mb-6 border-b pb-4 border-gray-200 flex justify-between items-center">
+                 <!-- Título Removido para Manter Foco na Tarefa -->
+                 <h2 class="text-3xl font-bold text-gm-blue">Simulador Service Collaboration</h2> 
+                 <span class="text-lg font-semibold text-gray-600">Grupo: <span id="grupoAtual" class="text-gm-gold">N/A</span></span>
+            </div>
+
+            <!-- BOTão DE VOLTAR PARA ALTERAR GRUPO -->
+            <button onclick="showGroupScreenFromTraining()"
+                    class="flex items-center space-x-1 py-2 px-4 mb-4 border border-gray-300 rounded-lg shadow-md text-sm font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                <span>Voltar e Alterar Grupo</span>
+            </button>
+
+            <!-- LINK PARA O SIMULADOR -->
+            <h3 class="text-xl font-semibold text-gray-700 mb-4">Ferramenta de Análise:</h3>
+            <button onclick="showCRMSimulatorAccess()"
+                    class="w-full text-center py-3 px-4 mb-8 border border-gm-blue rounded-lg shadow-md text-lg font-bold text-gm-blue hover:bg-gm-blue hover:text-white transition duration-150 transform hover:scale-[1.01]">
+                ACESSAR: CRM PÓS-VENDA CHEVROLET (SIMULADOR)
+            </button>
+
+            <!-- FORMULÁRIO DE RESPOSTA -->
+            <form id="formResposta" class="space-y-4">
+                <h3 class="text-xl font-semibold text-gray-700">Tarefa</h3>
+                <label for="respostaEstrategica" class="block text-lg font-medium text-gray-900 leading-relaxed bg-yellow-50 p-3 rounded-lg border-l-4 border-gm-gold">
+                    Considerando a análise realizada no CRM, qual será a abordagem estratégica para o atendimento ao Cliente?
+                </label>
+                
+                <textarea id="respostaEstrategica" required rows="6" placeholder="Descreva sua estratégia de abordagem (Qual argumento usar, como será o planejamento e quais informações irá utilizar)..."
+                          class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-gm-blue focus:border-gm-blue transition"></textarea>
+                
+                <button type="submit"
+                        class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-md text-lg font-bold text-white bg-green-600 hover:bg-green-700 transition duration-150 transform hover:scale-[1.01] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-600">
+                    Enviar Abordagem
+                </button>
+            </form>
+            
+            <div id="feedbackEnvio" class="hidden mt-4"></div>
+        </div>
+    </div>
+
+
+    <!-- 3. TELA DE DASHBOARD (Agenda) - Simulador CRM -->
     <div id="telaDashboard" class="hidden min-h-screen bg-gray-50 p-4 md:p-8">
         <header class="bg-white rounded-xl shadow-gm p-4 mb-6 sticky top-0 z-10">
             <div class="flex items-center justify-between">
@@ -558,10 +766,19 @@
                     <h1 class="text-2xl font-extrabold text-gm-blue">AGENDA PÓS-VENDA</h1>
                     <span class="ml-4 text-gray-500 font-semibold text-lg hidden sm:block">| Terça-feira, 29 de Novembro de 2025</span>
                 </div>
-                <button onclick="window.location.reload()"
-                        class="text-sm font-medium text-red-600 hover:text-red-800 transition">
-                    Sair / Logout
-                </button>
+                <div class="flex space-x-3">
+                    <!-- BOTÃO RETORNAR (EXISTENTE) -->
+                    <button onclick="showTrainingScreen()"
+                            class="flex items-center space-x-1 py-2 px-4 border border-gray-300 rounded-lg shadow-md text-sm font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 transition">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                        <span>Voltar à Tarefa</span>
+                    </button>
+                    <!-- BOTÃO LOGOUT -->
+                    <button onclick="window.location.reload()"
+                            class="text-sm font-medium text-red-600 hover:text-red-800 transition">
+                        Sair / Logout
+                    </button>
+                </div>
             </div>
             <p class="text-sm text-gray-500 mt-1">Pré-Check Operacional: Clientes Agendados para Amanhã.</p>
         </header>
